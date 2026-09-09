@@ -1,9 +1,12 @@
 from app.graph import graph
 
 
+question = input("Ask your question: ")
+
+
 result = graph.invoke(
     {
-        "user_question": "Which state generated the highest revenue?",
+        "user_question": question,
         "generated_sql": "",
         "database_result": [],
         "final_answer": ""
