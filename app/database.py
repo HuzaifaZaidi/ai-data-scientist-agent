@@ -72,21 +72,56 @@ def get_revenue_by_state():
 def execute_query(query):
     """Execute a safe, read-only SQL query and return the results."""
 
+    if not isinstance(query, str):
+        raise ValueError("Query must be a string.")
+
     query = query.strip()
 
     if not query:
         raise ValueError("Query cannot be empty.")
 
-    # Remove trailing semicolon for validation
+    # Remove one optional semicolon from the end.
     cleaned_query = query.rstrip(";").strip()
 
-    # Only allow SELECT statements
-    if not cleaned_query.upper().startswith("SELECT"):
+    if not cleaned_query:
+        raise ValueError("Query cannot be empty.")
+
+    upper_query = cleaned_query.upper()
+
+    # Only allow SELECT queries.
+    if not upper_query.startswith("SELECT"):
         raise ValueError("Only SELECT queries are allowed.")
 
-    # Prevent multiple SQL statements
+    # Prevent multiple SQL statements.
     if ";" in cleaned_query:
         raise ValueError("Multiple SQL statements are not allowed.")
+
+    # Prevent SQL comments.
+    if "--" in cleaned_query or "/*" in cleaned_query or "*/" in cleaned_query:
+        raise ValueError("SQL comments are not allowed.")
+
+    # Block database modification commands.
+    dangerous_keywords = [
+        "INSERT",
+        "UPDATE",
+        "DELETE",
+        "DROP",
+        "ALTER",
+        "TRUNCATE",
+        "CREATE",
+        "GRANT",
+        "REVOKE",
+    ]
+
+    for keyword in dangerous_keywords:
+        if keyword in upper_query:
+            raise ValueError(
+                f"Query contains forbidden keyword: {keyword}"
+            )
+
+    # Add a maximum result limit if the query does not already have one.
+    if "LIMIT" not in upper_query:
+        cleaned_query = f"{cleaned_query} LIMIT 1000"
 
     connection = get_connection()
 
@@ -94,13 +129,18 @@ def execute_query(query):
         with connection.cursor() as cursor:
             cursor.execute(cleaned_query)
 
-            columns = [description[0] for description in cursor.description]
+            columns = [
+                description[0]
+                for description in cursor.description
+            ]
+
             rows = cursor.fetchall()
 
             return columns, rows
 
     finally:
         connection.close()
+
 def get_database_schema():
     """Return the tables and columns available to the analytics agent."""
 
