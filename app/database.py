@@ -68,3 +68,26 @@ def get_revenue_by_state():
 
     finally:
         connection.close()
+        
+def execute_query(query):
+    """Execute a read-only SQL query and return the results."""
+
+    query = query.strip()
+
+    # Only allow SELECT queries
+    if not query.upper().startswith("SELECT"):
+        raise ValueError("Only SELECT queries are allowed.")
+
+    connection = get_connection()
+
+    try:
+        with connection.cursor() as cursor:
+            cursor.execute(query)
+
+            columns = [description[0] for description in cursor.description]
+            rows = cursor.fetchall()
+
+            return columns, rows
+
+    finally:
+        connection.close()
