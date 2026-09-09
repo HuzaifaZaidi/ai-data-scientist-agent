@@ -4,7 +4,6 @@ import psycopg
 from dotenv import load_dotenv
 
 
-# Load variables from .env
 load_dotenv()
 
 
@@ -29,7 +28,6 @@ def get_order_count():
 
     try:
         with connection.cursor() as cursor:
-
             cursor.execute(
                 "SELECT COUNT(*) FROM orders;"
             )
@@ -37,6 +35,36 @@ def get_order_count():
             result = cursor.fetchone()
 
             return result[0]
+
+    finally:
+        connection.close()
+
+
+def get_revenue_by_state():
+    """Return revenue and profit for each state."""
+
+    connection = get_connection()
+
+    try:
+        with connection.cursor() as cursor:
+
+            query = """
+                SELECT
+                    o.state,
+                    SUM(od.amount) AS revenue,
+                    SUM(od.profit) AS profit
+                FROM orders o
+                JOIN order_details od
+                    ON o.order_id = od.order_id
+                GROUP BY o.state
+                ORDER BY revenue DESC;
+            """
+
+            cursor.execute(query)
+
+            results = cursor.fetchall()
+
+            return results
 
     finally:
         connection.close()
