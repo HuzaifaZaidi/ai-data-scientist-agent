@@ -60,7 +60,9 @@ IMPORTANT RULES:
 def generate_sql_node(state: AgentState):
     print("Generating SQL...")
 
-    sql = generate_sql(state["user_question"])
+    sql = generate_sql(
+    state["user_question"],
+    state["analysis_plan"])
 
     print("Generated SQL:", sql)
 

@@ -2,7 +2,7 @@ from app.llm import ask_llm
 from app.database import get_database_info
 
 
-def generate_sql(user_question):
+def generate_sql(user_question, analysis_plan=""):
     """Generate a PostgreSQL SELECT query from a user's question."""
 
     database_info = get_database_info()
@@ -18,15 +18,19 @@ DATABASE SCHEMA:
 DATABASE RELATIONSHIPS:
 {database_info["relationships"]}
 
+ANALYSIS PLAN:
+{analysis_plan}
+
 IMPORTANT RULES:
 1. Generate PostgreSQL SQL.
 2. Only generate SELECT queries.
 3. Do not generate INSERT, UPDATE, DELETE, DROP, ALTER, CREATE, or TRUNCATE.
 4. Use only tables and columns that exist in the schema.
-5. Use JOINs when data from multiple tables is required.
-6. Return ONLY the SQL query.
-7. Do not use markdown code fences.
-8. Do not explain the query.
+5. Follow the analysis plan when deciding what data to retrieve.
+6. Use JOINs when data from multiple tables is required.
+7. Return ONLY the SQL query.
+8. Do not use markdown code fences.
+9. Do not explain the query.
 
 USER QUESTION:
 {user_question}
