@@ -4,6 +4,7 @@ from langgraph.graph import StateGraph, START, END
 from app.sql_agent import generate_sql
 from app.database import execute_query, get_database_info
 from app.llm import ask_llm
+from app.analytics_tools import analyze_data, summarize_numeric_column
 
 
 class AgentState(TypedDict):
@@ -11,6 +12,7 @@ class AgentState(TypedDict):
     analysis_plan: str
     generated_sql: str
     database_result: list
+    analysis_result: dict
     sql_error: str
     retry_count: int
     final_answer: str
@@ -168,6 +170,43 @@ def decide_after_sql(state: AgentState):
 
     return "repair_sql"
 
+def python_analysis_node(state: AgentState):
+    print("Running Python analysis...")
+
+    columns = list(state["database_result"][0].keys())
+    rows = [
+        tuple(row.values())
+        for row in state["database_result"]
+    ]
+
+    dataframe = analyze_data(
+        columns,
+        rows
+    )
+
+    print("Pandas DataFrame:")
+    print(dataframe)
+
+    analysis_result = {}
+
+    if "revenue" in dataframe.columns:
+      analysis_result["revenue_summary"] = summarize_numeric_column(
+        dataframe,
+        "revenue"
+    )
+
+    elif "total_revenue" in dataframe.columns:
+        analysis_result["revenue_summary"] = summarize_numeric_column(
+        dataframe,
+        "total_revenue"
+    )
+
+    print("Python analysis result:", analysis_result)
+
+    return {
+        "analysis_result": analysis_result
+    }
+
 def final_answer_node(state: AgentState):
     print("Generating final answer...")
 
@@ -209,6 +248,7 @@ builder.add_node("receive_question", receive_question)
 builder.add_node("analysis_plan", analysis_plan_node)
 builder.add_node("generate_sql", generate_sql_node)
 builder.add_node("execute_sql", execute_sql_node)
+builder.add_node("python_analysis", python_analysis_node)
 builder.add_node("repair_sql", repair_sql_node)
 builder.add_node("final_answer", final_answer_node)
 
@@ -223,9 +263,11 @@ builder.add_conditional_edges(
     decide_after_sql,
     {
         "repair_sql": "repair_sql",
-        "final_answer": "final_answer"
+        "final_answer": "python_analysis"
     }
 )
+
+builder.add_edge("python_analysis", "final_answer")
 
 builder.add_edge("repair_sql", "execute_sql")
 
