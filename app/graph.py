@@ -11,6 +11,8 @@ class AgentState(TypedDict):
     analysis_plan: str
     generated_sql: str
     database_result: list
+    sql_error: str
+    retry_count: int
     final_answer: str
 
 
@@ -61,36 +63,110 @@ def generate_sql_node(state: AgentState):
     print("Generating SQL...")
 
     sql = generate_sql(
-    state["user_question"],
-    state["analysis_plan"])
+        state["user_question"],
+        state["analysis_plan"]
+    )
 
     print("Generated SQL:", sql)
 
     return {
-        "generated_sql": sql
-    }
+    "generated_sql": sql,
+    "sql_error": ""
+}
 
 
 def execute_sql_node(state: AgentState):
     print("Executing SQL...")
 
-    columns, rows = execute_query(
-        state["generated_sql"]
-    )
-
-    result = []
-
-    for row in rows:
-        result.append(
-            dict(zip(columns, row))
+    try:
+        columns, rows = execute_query(
+            state["generated_sql"]
         )
 
-    print("Database result:", result)
+        result = []
+
+        for row in rows:
+            result.append(
+                dict(zip(columns, row))
+            )
+
+        print("Database result:", result)
+
+        return {
+            "database_result": result,
+            "sql_error": ""
+        }
+
+    except Exception as e:
+
+        error_message = str(e)
+
+        print("SQL execution error:", error_message)
+
+        return {
+            "database_result": [],
+            "sql_error": error_message
+        }
+    
+def repair_sql_node(state: AgentState):
+    print("Repairing SQL...")
+
+    database_info = get_database_info()
+
+    prompt = f"""
+You are a PostgreSQL SQL expert.
+
+The user asked:
+
+{state["user_question"]}
+
+The analysis plan is:
+
+{state["analysis_plan"]}
+
+DATABASE SCHEMA:
+{database_info["schema"]}
+
+DATABASE RELATIONSHIPS:
+{database_info["relationships"]}
+
+The generated SQL was:
+
+{state["generated_sql"]}
+
+PostgreSQL returned this error:
+
+{state["sql_error"]}
+
+Fix the SQL query.
+
+Rules:
+1. Return ONLY the corrected SQL query.
+2. Generate only a SELECT query.
+3. Use only tables and columns from the database schema.
+4. Follow the analysis plan.
+5. Do not explain the query.
+6. Do not use markdown code fences.
+"""
+
+    repaired_sql = ask_llm(prompt)
+
+    print("Repaired SQL:", repaired_sql)
 
     return {
-        "database_result": result
+        "generated_sql": repaired_sql.strip(),
+        "retry_count": state["retry_count"] + 1,
+        "sql_error": ""
     }
 
+def decide_after_sql(state: AgentState):
+    if state["sql_error"] == "":
+        return "final_answer"
+
+    if state["retry_count"] >= 1:
+        return "final_answer"
+
+    return "repair_sql"
 
 def final_answer_node(state: AgentState):
     print("Generating final answer...")
@@ -133,6 +209,7 @@ builder.add_node("receive_question", receive_question)
 builder.add_node("analysis_plan", analysis_plan_node)
 builder.add_node("generate_sql", generate_sql_node)
 builder.add_node("execute_sql", execute_sql_node)
+builder.add_node("repair_sql", repair_sql_node)
 builder.add_node("final_answer", final_answer_node)
 
 # Connect nodes
@@ -140,7 +217,18 @@ builder.add_edge(START, "receive_question")
 builder.add_edge("receive_question", "analysis_plan")
 builder.add_edge("analysis_plan", "generate_sql")
 builder.add_edge("generate_sql", "execute_sql")
-builder.add_edge("execute_sql", "final_answer")
+
+builder.add_conditional_edges(
+    "execute_sql",
+    decide_after_sql,
+    {
+        "repair_sql": "repair_sql",
+        "final_answer": "final_answer"
+    }
+)
+
+builder.add_edge("repair_sql", "execute_sql")
+
 builder.add_edge("final_answer", END)
 
 # Compile the graph
