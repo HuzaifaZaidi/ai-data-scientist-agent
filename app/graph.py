@@ -205,6 +205,45 @@ def python_analysis_node(state):
 
     analysis_result = {}
 
+    # ---------------------------------------------------------
+    # 1. Detect comparison / difference metrics
+    # ---------------------------------------------------------
+
+    comparison_column = None
+
+    comparison_keywords = [
+        "difference",
+        "diff",
+        "change",
+        "higher_than",
+        "lower_than",
+        "increase",
+        "decrease",
+        "variance",
+    ]
+
+    for column in dataframe.columns:
+        column_lower = column.lower()
+
+        if any(
+            keyword in column_lower
+            for keyword in comparison_keywords
+        ):
+            comparison_column = column
+            break
+
+    if comparison_column:
+        value = dataframe[comparison_column].iloc[0]
+
+        analysis_result["comparison"] = {
+            "metric": comparison_column,
+            "difference": float(value)
+        }
+
+    # ---------------------------------------------------------
+    # 2. Detect standard revenue metrics
+    # ---------------------------------------------------------
+
     numeric_metric_column = None
 
     possible_revenue_columns = [
@@ -220,6 +259,7 @@ def python_analysis_node(state):
             break
 
     if numeric_metric_column:
+
         analysis_result["metric_summary"] = summarize_numeric_column(
             dataframe,
             numeric_metric_column
@@ -240,7 +280,7 @@ def python_analysis_node(state):
 
     return {
         "analysis_result": analysis_result
-    }
+    }  
 def final_answer_node(state: AgentState):
     print("Generating final answer...")
 
