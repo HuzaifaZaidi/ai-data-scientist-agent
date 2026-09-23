@@ -51,6 +51,26 @@ IMPORTANT RULES:
 6. Use the actual database terminology. For example, revenue is represented by the "amount" column.
 7. Do not generate SQL yet.
 8. Keep the plan concise.
+9. Explicitly state what Python analysis should be performed after the SQL result is retrieved.
+10. Possible Python analyses include:
+    - summary statistics
+    - average
+    - minimum
+    - maximum
+    - total
+    - ranking
+    - percentage comparison
+    - trend analysis
+    - distribution analysis
+11. If no additional Python analysis is needed, say "No additional Python analysis required."
+
+AVERAGE REVENUE RULE:
+12. Carefully distinguish between an average transaction/line-item amount and average revenue per business entity.
+13. When the user asks for "average revenue by" a dimension such as state, city, customer, category, or month, determine whether revenue should first be aggregated at the order level.
+14. In this e-commerce database, an order can contain multiple rows in order_details.
+15. Therefore, when calculating average revenue per order by a dimension, first calculate total revenue for each order by SUM(amount), then associate each order with the requested dimension, and finally calculate the average of those order-level revenues.
+16. Explicitly describe this calculation in the analysis plan when it applies.
+17. Do not simply use AVG(amount) when the intended meaning is average revenue per order.
 """
 
     plan = ask_llm(prompt)
@@ -170,18 +190,14 @@ def decide_after_sql(state: AgentState):
 
     return "repair_sql"
 
-def python_analysis_node(state: AgentState):
+def python_analysis_node(state):
     print("Running Python analysis...")
 
-    columns = list(state["database_result"][0].keys())
-    rows = [
-        tuple(row.values())
-        for row in state["database_result"]
-    ]
+    database_result = state["database_result"]
 
     dataframe = analyze_data(
-        columns,
-        rows
+        list(database_result[0].keys()),
+        database_result
     )
 
     print("Pandas DataFrame:")
@@ -189,31 +205,50 @@ def python_analysis_node(state: AgentState):
 
     analysis_result = {}
 
-    if "revenue" in dataframe.columns:
-      analysis_result["revenue_summary"] = summarize_numeric_column(
-        dataframe,
-        "revenue"
-    )
+    numeric_metric_column = None
 
-    elif "total_revenue" in dataframe.columns:
-        analysis_result["revenue_summary"] = summarize_numeric_column(
-        dataframe,
-        "total_revenue"
-    )
+    possible_revenue_columns = [
+        "revenue",
+        "total_revenue",
+        "average_revenue",
+        "average_revenue_by_state",
+    ]
+
+    for column in possible_revenue_columns:
+        if column in dataframe.columns:
+            numeric_metric_column = column
+            break
+
+    if numeric_metric_column:
+        analysis_result["metric_summary"] = summarize_numeric_column(
+            dataframe,
+            numeric_metric_column
+        )
+
+        ranked_dataframe = dataframe.sort_values(
+            by=numeric_metric_column,
+            ascending=False
+        ).reset_index(drop=True)
+
+        ranked_dataframe["rank"] = ranked_dataframe.index + 1
+
+        analysis_result["ranking"] = ranked_dataframe[
+            ["rank", dataframe.columns[0], numeric_metric_column]
+        ].to_dict(orient="records")
 
     print("Python analysis result:", analysis_result)
 
     return {
         "analysis_result": analysis_result
     }
-
 def final_answer_node(state: AgentState):
     print("Generating final answer...")
 
     prompt = f"""
 You are a business data analyst.
 
-Answer the user's question using ONLY the database result provided below.
+Answer the user's question using ONLY the database result
+and Python analysis result provided below.
 
 USER QUESTION:
 {state["user_question"]}
@@ -224,11 +259,18 @@ SQL QUERY:
 DATABASE RESULT:
 {state["database_result"]}
 
+PYTHON ANALYSIS:
+{state["analysis_result"]}
+
 Instructions:
 1. Give the direct answer first.
-2. Use the actual values from the database result.
-3. Do not invent information.
-4. Keep the answer concise and business-friendly.
+2. Use the actual values from the database result and Python analysis.
+3. Use the Python analysis when it contains rankings, summary statistics,
+   comparisons, or other calculated insights.
+4. If a ranking is provided, present the results in ranking order.
+5. Do not invent information.
+6. Do not perform calculations that are not supported by the provided data.
+7. Keep the answer concise and business-friendly.
 """
 
     answer = ask_llm(prompt)
