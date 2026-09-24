@@ -1,8 +1,7 @@
 import os
 
 from dotenv import load_dotenv
-from google import genai
-
+from langchain_google_genai import ChatGoogleGenerativeAI
 
 load_dotenv()
 
@@ -11,16 +10,14 @@ api_key = os.getenv("GEMINI_API_KEY")
 if not api_key:
     raise ValueError("GEMINI_API_KEY is not set in the .env file.")
 
-
-client = genai.Client(api_key=api_key)
+llm = ChatGoogleGenerativeAI(
+    model="gemini-2.5-flash",
+    google_api_key=api_key,
+    temperature=0
+)
 
 
 def ask_llm(prompt):
     """Send a prompt to Gemini and return the response."""
-
-    response = client.models.generate_content(
-        model="gemini-2.5-flash",
-        contents=prompt
-    )
-
-    return response.text
+    response = llm.invoke(prompt)
+    return response.content

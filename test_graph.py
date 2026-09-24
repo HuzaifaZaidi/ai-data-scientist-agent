@@ -1,39 +1,47 @@
+from langchain_core.messages import HumanMessage
+
 from app.graph import graph
+from app.database import get_database_info
 
 
-question = input("Ask your question: ")
+database_info = get_database_info()
+
+question = "What is the total revenue from Maharashtra?"
+
+
+message = HumanMessage(
+    content=f"""
+You are an e-commerce data analyst.
+
+DATABASE SCHEMA:
+{database_info["schema"]}
+
+DATABASE RELATIONSHIPS:
+{database_info["relationships"]}
+
+Use the SQL tool to answer the user's question.
+
+USER QUESTION:
+{question}
+
+Rules:
+- Use only tables and columns from the database schema.
+- Use database relationships when a JOIN is required.
+- Do not invent columns.
+- Use the SQL tool rather than answering from general knowledge.
+"""
+)
 
 
 result = graph.invoke(
     {
-        "user_question": question,
-        "analysis_plan": "",
-        "generated_sql": "",
-        "database_result": [],
-        "analysis_result": {},
-        "final_answer": "",
-        "sql_error": "",
-        "retry_count": 0
+        "messages": [message]
     }
 )
 
-print("\nFINAL STATE")
-print("=" * 60)
 
-print("User Question:")
-print(result["user_question"])
+print("\nFinal messages:")
 
-print("\nAnalysis Plan:")
-print(result["analysis_plan"])
-
-print("\nGenerated SQL:")
-print(result["generated_sql"])
-
-print("\nDatabase Result:")
-print(result["database_result"])
-
-print("\nPython Analysis:")
-print(result["analysis_result"])
-
-print("\nFinal Answer:")
-print(result["final_answer"])
+for message in result["messages"]:
+    print("\n---")
+    print(message)
