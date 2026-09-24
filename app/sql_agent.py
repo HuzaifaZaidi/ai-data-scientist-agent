@@ -28,9 +28,17 @@ IMPORTANT RULES:
 4. Use only tables and columns that exist in the schema.
 5. Follow the analysis plan when deciding what data to retrieve.
 6. Use JOINs when data from multiple tables is required.
-7. Return ONLY the SQL query.
-8. Do not use markdown code fences.
-9. Do not explain the query.
+7. Give every calculated or aggregated expression a clear descriptive alias using AS.
+8. Examples:
+   - SUM(amount) AS total_revenue
+   - AVG(amount) AS average_revenue
+   - SUM(profit) AS total_profit
+   - SUM(amount) - SUM(other_amount) AS revenue_difference
+   - calculated percentages AS percentage_contribution
+9. Do not return unnamed expressions such as ?column?.
+10. Return ONLY the SQL query.
+11. Do not use markdown code fences.
+12. Do not explain the query.
 
 USER QUESTION:
 {user_question}

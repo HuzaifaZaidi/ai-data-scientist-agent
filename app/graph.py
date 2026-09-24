@@ -241,14 +241,65 @@ def python_analysis_node(state):
         }
 
     # ---------------------------------------------------------
-    # 2. Detect standard revenue metrics
+    # 2. Detect percentage contribution
+    # ---------------------------------------------------------
+
+    revenue_columns = [
+        column
+        for column in dataframe.columns
+        if "revenue" in column.lower()
+    ]
+
+    if len(revenue_columns) >= 2 and len(dataframe) == 1:
+
+        total_revenue_column = None
+        component_revenue_column = None
+
+        for column in revenue_columns:
+
+            column_lower = column.lower()
+
+            if (
+                "total" in column_lower
+                or "overall" in column_lower
+            ):
+                total_revenue_column = column
+
+            elif column != total_revenue_column:
+                component_revenue_column = column
+
+        if total_revenue_column and component_revenue_column:
+
+            total_revenue = float(
+                dataframe[total_revenue_column].iloc[0]
+            )
+
+            component_revenue = float(
+                dataframe[component_revenue_column].iloc[0]
+            )
+
+            if total_revenue != 0:
+
+                percentage = (
+                    component_revenue / total_revenue
+                ) * 100
+
+                analysis_result["percentage_contribution"] = {
+                    "component_metric": component_revenue_column,
+                    "total_metric": total_revenue_column,
+                    "component_value": component_revenue,
+                    "total_value": total_revenue,
+                    "percentage": percentage
+                }
+
+    # ---------------------------------------------------------
+    # 3. Detect standard revenue metrics
     # ---------------------------------------------------------
 
     numeric_metric_column = None
 
     possible_revenue_columns = [
         "revenue",
-        "total_revenue",
         "average_revenue",
         "average_revenue_by_state",
     ]
@@ -280,7 +331,8 @@ def python_analysis_node(state):
 
     return {
         "analysis_result": analysis_result
-    }  
+    }
+
 def final_answer_node(state: AgentState):
     print("Generating final answer...")
 
