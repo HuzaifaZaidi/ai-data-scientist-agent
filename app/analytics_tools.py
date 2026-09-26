@@ -77,11 +77,17 @@ def analyze_dataframe(data: str) -> str:
     Use this tool when calculations or statistical analysis
     are required after retrieving data from the database.
     """
-
     import json
     import pandas as pd
 
-    records = json.loads(data)
+    try:
+        records = json.loads(data)
+    except json.JSONDecodeError:
+        return (
+            "The analysis tool received invalid JSON data. "
+            "Please run the SQL query again and pass the complete "
+            "JSON result to the analysis tool."
+        )
 
     if not records:
         return "No data available for analysis."
@@ -149,6 +155,6 @@ def create_chart(data: str, x_column: str, y_column: str) -> str:
     plt.tight_layout()
 
     plt.savefig(chart_path)
-    plt.close()
+    plt.close() 
 
-    return chart_path
+    return f"CHART_CREATED:{chart_path}"

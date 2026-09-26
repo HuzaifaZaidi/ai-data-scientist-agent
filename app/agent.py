@@ -24,8 +24,10 @@ Rules:
 - Use the database relationships when a JOIN is required.
 - Do not invent table names or column names.
 - Use the SQL tool whenever database information is required.
+- Use the Python analysis tool when calculations or statistical analysis are required.
+- Use the chart tool when the user asks for a chart or when a visualization would clearly help.
 - Do not answer using general knowledge when the database can provide the answer.
-- After receiving the tool result, provide a concise answer to the user.
+- After receiving the tool results, provide a concise answer to the user.
 """
 
     result = graph.invoke(
@@ -48,6 +50,24 @@ Rules:
             if isinstance(item, dict) and item.get("type") == "text":
                 text_parts.append(item.get("text", ""))
 
-        return "\n".join(text_parts)
+        final_content = "\n".join(text_parts)
 
-    return final_content
+    chart_path = None
+
+    for message in result["messages"]:
+        if getattr(message, "type", None) != "tool":
+            continue
+
+        content = message.content
+
+        if isinstance(content, str) and content.startswith("CHART_CREATED:"):
+            chart_path = content.replace(
+                "CHART_CREATED:",
+                "",
+                1
+            ).strip()
+
+    return {
+        "answer": final_content,
+        "chart": chart_path
+    }

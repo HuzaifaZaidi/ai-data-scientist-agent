@@ -1,0 +1,199 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+    <title>AI Data Scientist Agent</title>
+
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 900px;
+            margin: 40px auto;
+            padding: 0 20px;
+            background: #f5f5f5;
+        }
+
+        h1 {
+            margin-bottom: 8px;
+        }
+
+        .subtitle {
+            color: #666;
+            margin-bottom: 30px;
+        }
+
+        textarea {
+            width: 100%;
+            min-height: 100px;
+            padding: 12px;
+            font-size: 16px;
+            border: 1px solid #ccc;
+            border-radius: 8px;
+            box-sizing: border-box;
+            resize: vertical;
+        }
+
+        button {
+            margin-top: 12px;
+            padding: 12px 24px;
+            font-size: 16px;
+            border: none;
+            border-radius: 8px;
+            cursor: pointer;
+            background: #222;
+            color: white;
+        }
+
+        button:disabled {
+            background: #999;
+            cursor: not-allowed;
+        }
+
+        #status {
+            margin-top: 20px;
+            color: #666;
+        }
+
+        #result {
+            margin-top: 30px;
+            background: white;
+            padding: 20px;
+            border-radius: 8px;
+            display: none;
+        }
+
+        #answer {
+            white-space: pre-line;
+            line-height: 1.6;
+        }
+
+        #chart {
+            max-width: 100%;
+            margin-top: 20px;
+            display: none;
+        }
+
+        .error {
+            color: #b00020;
+        }
+    </style>
+</head>
+
+<body>
+
+    <h1>AI Data Scientist Agent</h1>
+
+    <p class="subtitle">
+        Ask questions about the e-commerce database using natural language.
+    </p>
+
+    <textarea
+        id="question"
+        placeholder="Example: What is the total revenue of Maharashtra?"
+    ></textarea>
+
+    <button id="askButton" onclick="askQuestion()">
+        Analyze
+    </button>
+
+    <div id="status"></div>
+
+    <div id="result">
+
+        <h2>Answer</h2>
+
+        <div id="answer"></div>
+
+        <h2 id="chartTitle" style="display: none;">
+            Visualization
+        </h2>
+
+        <img id="chart" alt="Generated analysis chart">
+
+    </div>
+
+
+    <script>
+
+        async function askQuestion() {
+
+            const questionInput = document.getElementById("question");
+            const button = document.getElementById("askButton");
+            const status = document.getElementById("status");
+            const result = document.getElementById("result");
+            const answer = document.getElementById("answer");
+            const chart = document.getElementById("chart");
+            const chartTitle = document.getElementById("chartTitle");
+
+            const question = questionInput.value.trim();
+
+            if (!question) {
+                status.textContent = "Please enter a question.";
+                status.className = "error";
+                return;
+            }
+
+            button.disabled = true;
+            status.className = "";
+            status.textContent = "Analyzing...";
+
+            result.style.display = "none";
+            chart.style.display = "none";
+            chartTitle.style.display = "none";
+
+            try {
+
+                const response = await fetch("/ask", {
+                    method: "POST",
+
+                    headers: {
+                        "Content-Type": "application/json"
+                    },
+
+                    body: JSON.stringify({
+                        question: question
+                    })
+                });
+
+                if (!response.ok) {
+                    throw new Error("Request failed.");
+                }
+
+                const data = await response.json();
+
+                answer.textContent = data.answer;
+
+                result.style.display = "block";
+
+                if (data.chart) {
+
+                    const chartPath = data.chart.replace(/\\/g, "/");
+
+                    chart.src = "/" + chartPath;
+                    chart.style.display = "block";
+                    chartTitle.style.display = "block";
+
+                }
+
+                status.textContent = "";
+
+            } catch (error) {
+
+                status.textContent =
+                    "Something went wrong: " + error.message;
+
+                status.className = "error";
+
+            } finally {
+
+                button.disabled = false;
+
+            }
+        }
+
+    </script>
+
+</body>
+</html>
