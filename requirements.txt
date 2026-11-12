@@ -1,0 +1,9 @@
+langchain-core
+langgraph
+fastapi
+uvicorn[standard]
+psycopg[binary]
+python-dotenv
+pandas
+matplotlib
+langchain-deepseek

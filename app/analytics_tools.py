@@ -107,25 +107,29 @@ def analyze_dataframe(data: str) -> str:
 
     return "\n".join(results)
 @tool
-def create_chart(data: str, x_column: str, y_column: str) -> str:
-    """
-    Create a bar chart from tabular JSON data.
 
-    Use this tool when a visualization would help explain
-    the data or comparison requested by the user.
+def create_chart(data: str, x_column: str, y_columns: list[str]) -> str:
+    """
+    Create a bar chart containing one or more numerical metrics.
+
+    Use this tool when the user requests a visualization.
+    Pass all requested numerical columns in y_columns.
     """
 
     import json
     import os
+    import uuid
 
     import matplotlib
-
     matplotlib.use("Agg")
 
     import matplotlib.pyplot as plt
     import pandas as pd
 
-    records = json.loads(data)
+    try:
+        records = json.loads(data)
+    except json.JSONDecodeError:
+        return "Invalid JSON data received for chart generation."
 
     if not records:
         return "No data available for visualization."
@@ -135,26 +139,45 @@ def create_chart(data: str, x_column: str, y_column: str) -> str:
     if x_column not in dataframe.columns:
         return f"Column '{x_column}' was not found in the data."
 
-    if y_column not in dataframe.columns:
-        return f"Column '{y_column}' was not found in the data."
+    if not y_columns:
+        return "At least one metric column is required."
+
+    for column in y_columns:
+        if column not in dataframe.columns:
+            return f"Column '{column}' was not found in the data."
 
     os.makedirs("charts", exist_ok=True)
 
-    import uuid
-
     chart_path = f"charts/chart_{uuid.uuid4().hex[:8]}.png"
 
-    plt.figure(figsize=(10, 6))
-    plt.bar(dataframe[x_column], dataframe[y_column])
+    # Create one subplot for each requested metric.
+    fig, axes = plt.subplots(
+        nrows=len(y_columns),
+        ncols=1,
+        figsize=(10, 5 * len(y_columns)),
+        squeeze=False
+    )
 
-    plt.xlabel(x_column)
-    plt.ylabel(y_column)
-    plt.title(f"{y_column} by {x_column}")
+    axes = axes.flatten()
 
-    plt.xticks(rotation=45, ha="right")
+    for ax, column in zip(axes, y_columns):
+
+        values = pd.to_numeric(dataframe[column], errors="coerce")
+
+        if values.isna().all():
+            plt.close(fig)
+            return f"Column '{column}' does not contain valid numeric values."
+
+        ax.bar(dataframe[x_column], values)
+
+        ax.set_xlabel(x_column)
+        ax.set_ylabel(column)
+        ax.set_title(f"{column} by {x_column}")
+
+        ax.tick_params(axis="x", rotation=45)
+
     plt.tight_layout()
-
-    plt.savefig(chart_path)
-    plt.close() 
+    plt.savefig(chart_path, dpi=150, bbox_inches="tight")
+    plt.close(fig)
 
     return f"CHART_CREATED:{chart_path}"

@@ -1,3 +1,4 @@
+
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -6,194 +7,483 @@
 
     <title>AI Data Scientist Agent</title>
 
+    <!-- Markdown rendering and HTML sanitization -->
+    <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/dompurify/dist/purify.min.js"></script>
+
     <style>
+        * {
+            box-sizing: border-box;
+        }
+
         body {
-            font-family: Arial, sans-serif;
-            max-width: 900px;
-            margin: 40px auto;
-            padding: 0 20px;
-            background: #f5f5f5;
+            margin: 0;
+            font-family: Inter, -apple-system, BlinkMacSystemFont,
+                         "Segoe UI", sans-serif;
+            background: #f4f6fa;
+            color: #172033;
+        }
+
+        .container {
+            max-width: 1050px;
+            margin: 0 auto;
+            padding: 55px 24px;
+        }
+
+        .header {
+            margin-bottom: 32px;
+        }
+
+        .eyebrow {
+            color: #4263eb;
+            font-size: 12px;
+            font-weight: 700;
+            letter-spacing: 1.5px;
+            text-transform: uppercase;
         }
 
         h1 {
-            margin-bottom: 8px;
+            font-size: 34px;
+            margin: 10px 0;
+            letter-spacing: -1px;
         }
 
         .subtitle {
-            color: #666;
-            margin-bottom: 30px;
+            color: #667085;
+            font-size: 15px;
+            line-height: 1.6;
+        }
+
+        .query-card {
+            background: white;
+            border: 1px solid #e4e8f0;
+            border-radius: 14px;
+            padding: 24px;
+            box-shadow: 0 4px 18px rgba(20, 35, 70, 0.04);
+        }
+
+        .input-label {
+            display: block;
+            font-size: 14px;
+            font-weight: 650;
+            margin-bottom: 12px;
         }
 
         textarea {
             width: 100%;
-            min-height: 100px;
-            padding: 12px;
-            font-size: 16px;
-            border: 1px solid #ccc;
-            border-radius: 8px;
-            box-sizing: border-box;
+            min-height: 115px;
+            padding: 15px;
+            font-family: inherit;
+            font-size: 15px;
+            line-height: 1.6;
+            border: 1px solid #d8deea;
+            border-radius: 9px;
             resize: vertical;
+            outline: none;
+            transition: border 0.2s, box-shadow 0.2s;
+        }
+
+        textarea:focus {
+            border-color: #4263eb;
+            box-shadow: 0 0 0 3px rgba(66, 99, 235, 0.1);
+        }
+
+        .actions {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            gap: 12px;
+            margin-top: 16px;
+        }
+
+        .hint {
+            color: #98a2b3;
+            font-size: 12px;
         }
 
         button {
-            margin-top: 12px;
-            padding: 12px 24px;
-            font-size: 16px;
             border: none;
             border-radius: 8px;
-            cursor: pointer;
-            background: #222;
+            padding: 12px 24px;
+            background: #2546c7;
             color: white;
+            font-size: 14px;
+            font-weight: 650;
+            cursor: pointer;
+            transition: background 0.2s;
+        }
+
+        button:hover {
+            background: #1938aa;
         }
 
         button:disabled {
-            background: #999;
+            background: #98a2b3;
             cursor: not-allowed;
         }
 
         #status {
-            margin-top: 20px;
-            color: #666;
-        }
-
-        #result {
-            margin-top: 30px;
-            background: white;
-            padding: 20px;
-            border-radius: 8px;
-            display: none;
-        }
-
-        #answer {
-            white-space: pre-line;
-            line-height: 1.6;
-        }
-
-        #chart {
-            max-width: 100%;
-            margin-top: 20px;
-            display: none;
+            margin-top: 18px;
+            font-size: 14px;
+            color: #667085;
         }
 
         .error {
-            color: #b00020;
+            color: #c0392b !important;
+        }
+
+        .result-card {
+            margin-top: 28px;
+            background: white;
+            border: 1px solid #e4e8f0;
+            border-radius: 14px;
+            padding: 28px;
+            box-shadow: 0 4px 18px rgba(20, 35, 70, 0.04);
+            display: none;
+        }
+
+        .section-heading {
+            font-size: 19px;
+            font-weight: 700;
+            margin: 0 0 22px;
+        }
+
+        #answer {
+            color: #344054;
+            font-size: 14px;
+            line-height: 1.8;
+            overflow-wrap: anywhere;
+        }
+
+        #answer h1,
+        #answer h2,
+        #answer h3 {
+            color: #172033;
+            letter-spacing: -0.3px;
+            margin: 24px 0 12px;
+        }
+
+        #answer h1 {
+            font-size: 23px;
+        }
+
+        #answer h2 {
+            font-size: 19px;
+        }
+
+        #answer h3 {
+            font-size: 16px;
+        }
+
+        #answer p {
+            margin: 12px 0;
+        }
+
+        #answer strong {
+            color: #172033;
+        }
+
+        #answer ul,
+        #answer ol {
+            padding-left: 24px;
+        }
+
+        #answer li {
+            margin: 7px 0;
+        }
+
+        #answer table {
+            width: 100%;
+            border-collapse: collapse;
+            margin: 18px 0;
+            font-size: 13px;
+        }
+
+        #answer th {
+            background: #f0f3fa;
+            color: #344054;
+            text-align: left;
+            font-weight: 700;
+        }
+
+        #answer th,
+        #answer td {
+            padding: 12px 14px;
+            border-bottom: 1px solid #e8ecf2;
+        }
+
+        #answer tr:last-child td {
+            border-bottom: none;
+        }
+
+        #answer blockquote {
+            border-left: 3px solid #4263eb;
+            margin: 16px 0;
+            padding: 8px 16px;
+            background: #f6f8ff;
+            color: #475467;
+        }
+
+        #answer code {
+            background: #f0f2f5;
+            padding: 2px 5px;
+            border-radius: 4px;
+        }
+
+        .chart-section {
+            margin-top: 32px;
+            padding-top: 25px;
+            border-top: 1px solid #e8ecf2;
+            display: none;
+        }
+
+        .chart-heading {
+            font-size: 19px;
+            margin-bottom: 18px;
+        }
+
+        #chart {
+            display: block;
+            max-width: 100%;
+            height: auto;
+            margin: 0 auto;
+            border-radius: 8px;
+        }
+
+        .footer {
+            text-align: center;
+            color: #98a2b3;
+            font-size: 12px;
+            margin-top: 35px;
+        }
+
+        @media (max-width: 600px) {
+            .container {
+                padding: 32px 16px;
+            }
+
+            h1 {
+                font-size: 27px;
+            }
+
+            .query-card,
+            .result-card {
+                padding: 19px;
+            }
+
+            .actions {
+                align-items: flex-start;
+                flex-direction: column;
+            }
+
+            button {
+                width: 100%;
+            }
+
+            #answer table {
+                display: block;
+                overflow-x: auto;
+                white-space: nowrap;
+            }
         }
     </style>
 </head>
 
 <body>
 
-    <h1>AI Data Scientist Agent</h1>
+<div class="container">
 
-    <p class="subtitle">
-        Ask questions about the e-commerce database using natural language.
-    </p>
+    <header class="header">
+        <div class="eyebrow">AI-Powered Analytics</div>
 
-    <textarea
-        id="question"
-        placeholder="Example: What is the total revenue of Maharashtra?"
-    ></textarea>
+        <h1>AI Data Scientist Agent</h1>
 
-    <button id="askButton" onclick="askQuestion()">
-        Analyze
-    </button>
+        <p class="subtitle">
+            Explore your e-commerce data using natural language.
+            Ask business questions, discover insights and generate visualizations.
+        </p>
+    </header>
 
-    <div id="status"></div>
+    <section class="query-card">
 
-    <div id="result">
+        <label class="input-label" for="question">
+            Ask your analytical question
+        </label>
 
-        <h2>Answer</h2>
+        <textarea
+            id="question"
+            placeholder="Example: Which five states generate the highest revenue, and what percentage of total revenue do they contribute?"
+        ></textarea>
+
+        <div class="actions">
+
+            <span class="hint">
+                Powered by DeepSeek, LangGraph and PostgreSQL
+            </span>
+
+            <button id="askButton" onclick="askQuestion()">
+                Analyze Data
+            </button>
+
+        </div>
+
+    </section>
+
+    <div id="status" role="status" aria-live="polite"></div>
+
+    <section class="result-card" id="result">
+
+        <h2 class="section-heading">Analysis Results</h2>
 
         <div id="answer"></div>
 
-        <h2 id="chartTitle" style="display: none;">
-            Visualization
-        </h2>
+        <div class="chart-section" id="chartSection">
 
-        <img id="chart" alt="Generated analysis chart">
+            <h2 class="chart-heading">Data Visualization</h2>
 
-    </div>
+            <img
+                id="chart"
+                alt="Generated data visualization"
+            >
+
+        </div>
+
+    </section>
+
+    <footer class="footer">
+        AI Data Scientist Agent · E-Commerce Analytics
+    </footer>
+
+</div>
+
+<script>
+
+    const questionInput = document.getElementById("question");
+
+    const button = document.getElementById("askButton");
+
+    const status = document.getElementById("status");
+
+    const result = document.getElementById("result");
+
+    const answer = document.getElementById("answer");
+
+    const chart = document.getElementById("chart");
+
+    const chartSection = document.getElementById("chartSection");
 
 
-    <script>
+    // Configure Markdown rendering.
+    if (window.marked) {
+        marked.setOptions({
+            gfm: true,
+            breaks: true
+        });
+    }
 
-        async function askQuestion() {
 
-            const questionInput = document.getElementById("question");
-            const button = document.getElementById("askButton");
-            const status = document.getElementById("status");
-            const result = document.getElementById("result");
-            const answer = document.getElementById("answer");
-            const chart = document.getElementById("chart");
-            const chartTitle = document.getElementById("chartTitle");
+    async function askQuestion() {
 
-            const question = questionInput.value.trim();
+        const question = questionInput.value.trim();
 
-            if (!question) {
-                status.textContent = "Please enter a question.";
-                status.className = "error";
-                return;
-            }
-
-            button.disabled = true;
-            status.className = "";
-            status.textContent = "Analyzing...";
-
-            result.style.display = "none";
-            chart.style.display = "none";
-            chartTitle.style.display = "none";
-
-            try {
-
-                const response = await fetch("/ask", {
-                    method: "POST",
-
-                    headers: {
-                        "Content-Type": "application/json"
-                    },
-
-                    body: JSON.stringify({
-                        question: question
-                    })
-                });
-
-                if (!response.ok) {
-                    throw new Error("Request failed.");
-                }
-
-                const data = await response.json();
-
-                answer.textContent = data.answer;
-
-                result.style.display = "block";
-
-                if (data.chart) {
-
-                    const chartPath = data.chart.replace(/\\/g, "/");
-
-                    chart.src = "/" + chartPath;
-                    chart.style.display = "block";
-                    chartTitle.style.display = "block";
-
-                }
-
-                status.textContent = "";
-
-            } catch (error) {
-
-                status.textContent =
-                    "Something went wrong: " + error.message;
-
-                status.className = "error";
-
-            } finally {
-
-                button.disabled = false;
-
-            }
+        if (!question) {
+            status.textContent = "Please enter a question.";
+            status.className = "error";
+            return;
         }
 
-    </script>
+        button.disabled = true;
+        button.textContent = "Analyzing...";
+
+        status.className = "";
+        status.textContent = "Analyzing your data. This may take a few moments.";
+
+        result.style.display = "none";
+        chartSection.style.display = "none";
+        chart.removeAttribute("src");
+
+        answer.innerHTML = "";
+
+        try {
+
+            const response = await fetch("/ask", {
+
+                method: "POST",
+
+                headers: {
+                    "Content-Type": "application/json"
+                },
+
+                body: JSON.stringify({
+                    question: question
+                })
+
+            });
+
+            if (!response.ok) {
+                throw new Error(
+                    "The server returned an error: " + response.status
+                );
+            }
+
+            const data = await response.json();
+
+            // Render Markdown safely.
+            if (window.marked && window.DOMPurify) {
+
+                const html = marked.parse(data.answer || "");
+
+                answer.innerHTML = DOMPurify.sanitize(html);
+
+            } else {
+
+                // Safe fallback if the external libraries cannot load.
+                answer.textContent = data.answer || "No answer was returned.";
+
+            }
+
+            result.style.display = "block";
+
+            // Display the generated chart if one exists.
+            if (data.chart) {
+
+                const chartPath = data.chart.replace(/\\/g, "/");
+
+                chart.src = "/" + chartPath + "?t=" + Date.now();
+
+                chartSection.style.display = "block";
+
+            }
+
+            status.textContent = "";
+
+        } catch (error) {
+
+            status.textContent =
+                "Unable to complete the analysis: " + error.message;
+
+            status.className = "error";
+
+        } finally {
+
+            button.disabled = false;
+            button.textContent = "Analyze Data";
+
+        }
+
+    }
+
+
+    // Allow Ctrl+Enter to submit a question.
+    questionInput.addEventListener("keydown", function(event) {
+
+        if (event.ctrlKey && event.key === "Enter") {
+            askQuestion();
+        }
+
+    });
+
+</script>
 
 </body>
 </html>
